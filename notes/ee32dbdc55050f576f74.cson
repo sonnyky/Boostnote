@@ -1,0 +1,31 @@
+type: "SNIPPET_NOTE"
+folder: "cdf8a4b93828814c84f9"
+title: "Getting response object from Amazon AWS in Unity"
+description: "Getting response object from Amazon AWS in Unity"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      responseObject.Response.S3Objects.ForEach((o) =>
+      {
+      	//ResultText.text += string.Format("{0}\\n", o.Key);
+      	Debug.Log("LIST : " + o.Key);
+      	// bucket配下の特定のディレクトリを見る
+      	int b = o.Key.IndexOf(directory);
+      	if (b != -1) {
+      		int c = o.Key.IndexOf("fish");
+      		if (c != -1) {
+      		Debug.Log("Key : " + o.Key);
+      		urlList.Add(o.Key);
+      		}
+          }
+      });
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:26:25.718Z"
+updatedAt: "2017-11-19T10:26:32.584Z"

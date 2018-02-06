@@ -1,0 +1,44 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Get mouse event"
+description: "Get mouse event"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      void Kinect::mouseCallback(int event, int x, int y, int flags, void* userdata) {
+      	if (event == cv::EVENT_LBUTTONDOWN)
+      	{
+      		Kinect* self = static_cast<Kinect*>(userdata);
+      		self->doMouseCallback(event, x, y, flags);
+      	}
+      }
+      
+      void Kinect::doMouseCallback(int event, int x, int y, int flags) {
+      	if (flags == (cv::EVENT_FLAG_LBUTTON))
+      	{
+      		rangeTopLeft.x = x;
+      		rangeTopLeft.y = y;
+      		std::cout << "Top left range perimeter is clicked for color Image - position (" << x << ", " << y << ")" << std::endl;
+      	}
+      
+      	if (flags == (cv::EVENT_FLAG_LBUTTON + cv::EVENT_FLAG_SHIFTKEY))
+      	{
+      		rangeBottomRight.x = x;
+      		rangeBottomRight.y = y;
+      		rangeWidth = rangeBottomRight.x - rangeTopLeft.x;
+      		rangeHeight = rangeBottomRight.y - rangeTopLeft.y;
+      		std::cout << "Bottom rigth range perimeter is clicked for projector Image - position (" << x << ", " << y << ")" << std::endl;
+      	}
+      
+      }
+      
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-25T14:21:02.827Z"
+updatedAt: "2017-11-25T14:21:10.535Z"

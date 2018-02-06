@@ -1,0 +1,24 @@
+type: "SNIPPET_NOTE"
+folder: "67ffeea8d0c924e35c48"
+title: "GDGTokyo勉強会。課題０、OnCreateの一部"
+description: "GDGTokyo勉強会。課題０、OnCreateの一部"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+       val lifecycleObserver = object : LifecycleObserver {
+                  @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+                  fun calledWhenOnAny(source: LifecycleOwner, event: Lifecycle.Event) {
+                      Log.d("CODELAB", "Lifecycle state:" + source.lifecycle.currentState.name)
+                  }
+              }
+              lifecycle.addObserver(lifecycleObserver)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2018-01-25T08:07:20.331Z"
+updatedAt: "2018-01-25T08:07:42.884Z"

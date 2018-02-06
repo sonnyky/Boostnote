@@ -1,0 +1,33 @@
+type: "SNIPPET_NOTE"
+folder: "67ffeea8d0c924e35c48"
+title: "Fragments"
+description: "Fragments"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      SectionsPagerManager mSectionsPagerAdapter;
+        ViewPager mViewPager;
+      
+        @Override
+          protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              setContentView(R.layout.activity_chart);
+             
+              // Create the adapter that will return a fragment for each of the three
+              // primary sections of the app.
+              mSectionsPagerAdapter = new SectionsPagerManager(getSupportFragmentManager());
+              //Set up the ViewPager with the sections adapter
+              mViewPager = (ViewPager) findViewById(R.id.pager);
+              mViewPager.setAdapter(mSectionsPagerAdapter);
+      
+          }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:57:36.602Z"
+updatedAt: "2017-11-19T10:57:41.346Z"

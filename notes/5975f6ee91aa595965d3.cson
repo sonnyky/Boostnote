@@ -1,0 +1,52 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "OldGetLava"
+description: "OldGetLava"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      //Old method of getting lava spawn points from Kinect depth information
+      
+      bool validPoint = true;
+      float diff = 0;
+      if (y < 10 || x < 10 || y > 410 || x > 500)
+      {
+          continue;
+      }
+      //TODO : Refactor point, reduce loop to minimal
+      for (int i = y - 10; i < y + 10; i+=1)
+      {
+          for (int j = x - 10; j < x + 10; j+=1)
+          {
+              int neighborDepthIndex = ((i) * 512) + (j);
+      
+              if (!mockMode)
+              {
+                  neighborDepth = depthData[neighborDepthIndex];
+              }else
+              {
+                  neighborDepth = dummyHeightValues[x, height - y - 1] * Constants.HEIGHTMAP_MAX_HEIGHT;
+              }
+      
+             diff += (depth - neighborDepth);
+             if(neighborDepth > depth)
+              {
+                  validPoint = false;
+              }
+          }
+      }
+      if (diff > Constants.VOLCANO_THRESHOLD && validPoint)
+      {
+         //positionCheckSphere.transform.position = thisPixelPos;
+          volcanoSpawnPoints.Add(thisPixelPos);
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:43:50.015Z"
+updatedAt: "2017-11-19T09:44:06.742Z"

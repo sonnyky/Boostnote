@@ -1,0 +1,45 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Get disturbance in heightmap points"
+description: "Get disturbance in heightmap points"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      float percentageDiff = heightPercentage - prevHeightPercentage;
+      
+      percentageDiff = percentageDiff > 0 ? percentageDiff : -percentageDiff;
+      
+      if (percentageDiff * Constants.HEIGHTMAP_MAX_HEIGHT > 10f)
+      {
+          if (disturbances.Count < maxDisturbancePoints)
+          {
+              disturbances.Add(thisPixelPos); // とりあえず 5個のエレメントが入る
+          }
+          else
+          {
+              int indexToRemove = 0;
+              float largestNumber = 0;
+              disturbances.Add(thisPixelPos); //　いったんList の長さは+1 になった
+              for (int i = disturbances.Count - 1; i >= 0; i--)
+              {
+                  Vector3 disturbancePointCandidate = disturbances[i];
+                  disturbancePointCandidate.y = 0;
+                  if ((disturbancePointCandidate - midPoint).sqrMagnitude > largestNumber)
+                  {
+                      largestNumber = (disturbancePointCandidate - midPoint).sqrMagnitude;
+                      indexToRemove = i;
+                  }
+              }
+              disturbances.RemoveAt(indexToRemove);
+          }
+      } 
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:42:59.596Z"
+updatedAt: "2017-11-19T09:43:10.706Z"

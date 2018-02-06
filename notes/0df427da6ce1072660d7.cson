@@ -1,0 +1,835 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Get kinect data"
+description: "Get kinect data"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      _#include "app.h"
+      #include "util.h"
+      
+      #include <thread>
+      #include <chrono>
+      
+      
+      #include "Urg_driver.h"
+      #include "Connection_information.h"
+      #include "math_utilities.h"
+      #include <numeric>
+      // oscpack
+      #include <ip/UdpSocket.h>
+      #include <osc/OscOutboundPacketStream.h>
+      #include <opencv2/features2d/features2d.hpp>
+      #include <opencv2/features2d.hpp>
+      #include <opencv2/xfeatures2d.hpp>
+      
+      
+      using namespace qrk;
+      using namespace std;
+      
+      
+      #define ADDRESS "127.0.0.1"
+      #define PORT 7777
+      
+      #define OUTPUT_BUFFER_SIZE 1024
+      
+      
+      // Constructor
+      Kinect::Kinect()
+      {
+      	// Initialize
+      	initialize();
+      }
+      
+      // Destructor
+      Kinect::~Kinect()
+      {
+      	// Finalize
+      	finalize();
+      }
+      
+      // Processing
+      void Kinect::run()
+      {
+      	// Main Loop
+      	while (true) {
+      		// Update Data
+      		update();
+      
+      		// Draw Data
+      		draw();
+      
+      		// Show Data
+      		show();
+      
+      		// Transmit data
+      		UdpTransmitSocket transmitSocket(IpEndpointName(ADDRESS, PORT));
+      		char buffer[OUTPUT_BUFFER_SIZE];
+      		osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
+      
+      		string tempString = depthString.str();
+      		tempString += to_string(rangeWidth) + "," + to_string(rangeHeight);
+      
+      		cout << "Size of Markers detected : " << markersDetected.size() << endl;
+      		cout << tempString << endl;
+      		char *toSendText = new char[tempString.size() + 1];
+      		std::strcpy(toSendText, tempString.c_str());
+      		transmitSocket.Send(toSendText, strlen(toSendText) + 1);
+      
+      
+      		// Key Check
+      		const int key = cv::waitKey(10);
+      		if (key == 'q') {
+      			canvas.setTo(cv::Scalar(0, 0, 0));
+      			std::cout << "Backspace pressed" << std::endl;
+      
+      		}
+      		else if (key == VK_ESCAPE) {
+      			break;
+      		}
+      	}
+      }
+      
+      // Initialize
+      void Kinect::initialize()
+      {
+      	cv::setUseOptimized(true);
+      	depthString.str(std::string());
+      
+      	// Initialize Sensor
+      	initializeSensor();
+      
+      	// Initialize Depth
+      	initializeDepth();
+      
+      	// Initialize Color Image
+      	initializeColorImage();
+      
+      	// Initialize Infrared image
+      	initializeInfraredImage();
+      
+      	//Initialize capture settings. Have to be after initializeSensor and initializeDepth so depthHeight and depthWidth are populated.
+      	cvNamedWindow("Color", CV_WINDOW_NORMAL);
+      	cvNamedWindow("Infrared", CV_WINDOW_NORMAL);
+      
+      	//cvNamedWindow("Reference", CV_WINDOW_NORMAL);
+      
+      	cv::setMouseCallback("Color", mouseCallback, this);
+      	depthMinRange = 600;
+      	depthMaxRange = 2500;
+      
+      	media_url = getFullPath(L"../Stamps/dragonball.png");
+      	refImgUrl = getFullPath(L"../ReferenceImages/testmarker.jpg");
+      
+      	stamp = cv::imread(bstr_to_str(media_url), -1);
+      	resize(stamp, stamp, Size(50, 50));
+      	// Wait a Few Seconds until begins to Retrieve Data from Sensor ( about 2000-[ms] )
+      	std::this_thread::sleep_for(std::chrono::seconds(2));
+      
+      	refImageGray = cv::imread(bstr_to_str(refImgUrl), cv::IMREAD_GRAYSCALE);
+      	refImage = cv::imread(bstr_to_str(refImgUrl), -1);
+      	testScene = cv::imread(bstr_to_str(refImgUrl), -1);
+      
+      	cv::Mat markerImage;
+      	currentDict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_ARUCO_ORIGINAL);
+      	cv::aruco::drawMarker(currentDict, 848, 500, markerImage, 1);
+      	//imwrite("../ReferenceImages/arucoMarker2.jpg", markerImage);
+      	rangeHeight = 0; rangeWidth = 0;
+      	markerLostCounter = 0;
+      	cv::imshow("Reference", markerImage);
+      
+      	arucoParams.doCornerRefinement = true;
+      	arucoParams.polygonalApproxAccuracyRate = 0.01;
+      	arucoParams.maxMarkerPerimeterRate = 40.0;
+      	arucoParams.minCornerDistanceRate = 0.07;
+      	arucoParams.minDistanceToBorder = 0.5;
+      	arucoParams.adaptiveThreshWinSizeMax = 25;
+      	arucoParams.polygonalApproxAccuracyRate = 0.0155;
+      
+      }
+      
+      // Initialize Sensor
+      inline void Kinect::initializeSensor()
+      {
+      	// Open Sensor
+      	ERROR_CHECK(GetDefaultKinectSensor(&kinect));
+      
+      	ERROR_CHECK(kinect->Open());
+      
+      	// Check Open
+      	BOOLEAN isOpen = FALSE;
+      	ERROR_CHECK(kinect->get_IsOpen(&isOpen));
+      	if (!isOpen) {
+      		throw std::runtime_error("failed IKinectSensor::get_IsOpen( &isOpen )");
+      	}
+      	// Retrieved Coordinate Mapper
+      	ERROR_CHECK(kinect->get_CoordinateMapper(&mapper));
+      }
+      
+      // Initialize infrared
+      inline void Kinect::initializeInfraredImage()
+      {
+      	// Open Infrared Reader
+      	ComPtr<IInfraredFrameSource> InfraredFrameSource;
+      	ERROR_CHECK(kinect->get_InfraredFrameSource(&InfraredFrameSource));
+      	ERROR_CHECK(InfraredFrameSource->OpenReader(&infraredFrameReader));
+      
+      	// Retrieve Infrared Description
+      	ComPtr<IFrameDescription> infraredFrameDescription;
+      	ERROR_CHECK(InfraredFrameSource->get_FrameDescription(&infraredFrameDescription));
+      	ERROR_CHECK(infraredFrameDescription->get_Width(&infraredWidth)); //???
+      	ERROR_CHECK(infraredFrameDescription->get_Height(&infraredHeight)); // ???
+      	ERROR_CHECK(infraredFrameDescription->get_BytesPerPixel(&infraredBytesPerPixel)); // ?
+      	infraredBuffer.resize(infraredWidth * infraredHeight);
+      }
+      // Initialize color image
+      inline void Kinect::initializeColorImage()
+      {
+      	// Open Color Reader
+      	ComPtr<IColorFrameSource> colorFrameSource;
+      	ERROR_CHECK(kinect->get_ColorFrameSource(&colorFrameSource));
+      	ERROR_CHECK(colorFrameSource->OpenReader(&colorFrameReader));
+      
+      	// Retrieve Color Description
+      	ComPtr<IFrameDescription> colorFrameDescription;
+      	ERROR_CHECK(colorFrameSource->CreateFrameDescription(ColorImageFormat::ColorImageFormat_Bgra, &colorFrameDescription));
+      	ERROR_CHECK(colorFrameDescription->get_Width(&colorWidth)); // 1920
+      	ERROR_CHECK(colorFrameDescription->get_Height(&colorHeight)); // 1080
+      	ERROR_CHECK(colorFrameDescription->get_BytesPerPixel(&colorBytesPerPixel)); // 4
+      
+      																				// Allocation Color Buffer
+      	colorBuffer.resize(colorWidth * colorHeight * colorBytesPerPixel);
+      }
+      
+      // Initialize Depth
+      inline void Kinect::initializeDepth()
+      {
+      	// Open Depth Reader
+      	ComPtr<IDepthFrameSource> depthFrameSource;
+      	ERROR_CHECK(kinect->get_DepthFrameSource(&depthFrameSource));
+      	ERROR_CHECK(depthFrameSource->OpenReader(&depthFrameReader));
+      
+      	// Retrieve Depth Description
+      	ComPtr<IFrameDescription> depthFrameDescription;
+      	ERROR_CHECK(depthFrameSource->get_FrameDescription(&depthFrameDescription));
+      	ERROR_CHECK(depthFrameDescription->get_Width(&depthWidth)); // 512
+      	ERROR_CHECK(depthFrameDescription->get_Height(&depthHeight)); // 424
+      	ERROR_CHECK(depthFrameDescription->get_BytesPerPixel(&depthBytesPerPixel)); // 2
+      
+      																				// Retrieve Depth Reliable Range
+      	UINT16 minReliableDistance;
+      	UINT16 maxReliableDistance;
+      	ERROR_CHECK(depthFrameSource->get_DepthMinReliableDistance(&minReliableDistance)); // 500
+      	ERROR_CHECK(depthFrameSource->get_DepthMaxReliableDistance(&maxReliableDistance)); // 4500
+      	std::cout << "Depth Reliable Range : " << minReliableDistance << " - " << maxReliableDistance << std::endl;
+      
+      	// Allocation Depth Buffer
+      	depthBuffer.resize(depthWidth * depthHeight);
+      }
+      
+      // Finalize
+      void Kinect::finalize()
+      {
+      	cv::destroyAllWindows();
+      
+      	// Close Sensor
+      	if (kinect != nullptr) {
+      		kinect->Close();
+      	}
+      }
+      
+      // Update Data
+      void Kinect::update()
+      {
+      	// Update Depth
+      	updateDepth();
+      
+      	// Update Color
+      	updateColor();
+      
+      	//Update Infrared
+      	updateInfrared();
+      
+      }
+      
+      // Update Infrared
+      inline void Kinect::updateInfrared()
+      {
+      	// Retrieve Depth Frame
+      	ComPtr<IInfraredFrame> infraredFrame;
+      	const HRESULT ret = infraredFrameReader->AcquireLatestFrame(&infraredFrame);
+      	if (FAILED(ret)) {
+      		return;
+      	}
+      
+      	// Retrieve Depth Data
+      	ERROR_CHECK(infraredFrame->CopyFrameDataToArray(static_cast<UINT>(infraredBuffer.size()), &infraredBuffer[0]));
+      
+      }
+      
+      // Update Depth
+      inline void Kinect::updateDepth()
+      {
+      	// Retrieve Depth Frame
+      	ComPtr<IDepthFrame> depthFrame;
+      	const HRESULT ret = depthFrameReader->AcquireLatestFrame(&depthFrame);
+      	if (FAILED(ret)) {
+      		return;
+      	}
+      
+      	// Retrieve Depth Data
+      	ERROR_CHECK(depthFrame->CopyFrameDataToArray(static_cast<UINT>(depthBuffer.size()), &depthBuffer[0]));
+      
+      }
+      
+      // Update Color
+      inline void Kinect::updateColor()
+      {
+      	// Retrieve Color Frame
+      	ComPtr<IColorFrame> colorFrame;
+      	const HRESULT ret = colorFrameReader->AcquireLatestFrame(&colorFrame);
+      	if (FAILED(ret)) {
+      		return;
+      	}
+      
+      	// Convert Format ( YUY2 -> BGRA )
+      	ERROR_CHECK(colorFrame->CopyConvertedFrameDataToArray(static_cast<UINT>(colorBuffer.size()), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra));
+      }
+      
+      // Draw Data
+      void Kinect::draw()
+      {
+      	// Draw Depth
+      	drawDepth();
+      
+      	// Draw Color
+      	drawColor();
+      
+      	// Draw Infrared
+      	drawInfrared();
+      }
+      
+      // Draw Depth
+      inline void Kinect::drawDepth()
+      {
+      	// Create cv::Mat from Depth Buffer
+      	depthMat = cv::Mat(depthHeight, depthWidth, CV_16UC1, &depthBuffer[0]);
+      }
+      
+      // Draw Infrared
+      inline void Kinect::drawInfrared()
+      {
+      	// Create cv::Mat from Infrared Buffer
+      	infraredMat = cv::Mat(infraredHeight, infraredWidth, CV_16UC1, &infraredBuffer[0]);
+      }
+      
+      // Draw Color
+      inline void Kinect::drawColor()
+      {
+      
+      	// Retrieve Mapped Coordinates
+      	std::vector<DepthSpacePoint> depthSpace(colorWidth * colorHeight);
+      	ERROR_CHECK(mapper->MapColorFrameToDepthSpace(depthBuffer.size(), &depthBuffer[0], depthSpace.size(), &depthSpace[0]));
+      
+      	// Mapping Depth to Color Resolution
+      	std::vector<UINT16> buffer(colorWidth * colorHeight);
+      
+      	for (int colorY = 0; colorY < colorHeight; colorY++) {
+      		for (int colorX = 0; colorX < colorWidth; colorX++) {
+      			unsigned int colorIndex = colorY * colorWidth + colorX;
+      			int depthX = static_cast<int>(depthSpace[colorIndex].X + 0.5f);
+      			int depthY = static_cast<int>(depthSpace[colorIndex].Y + 0.5f);
+      			if ((0 <= depthX) && (depthX < depthWidth) && (0 <= depthY) && (depthY < depthHeight)) {
+      				unsigned int depthIndex = depthY * depthWidth + depthX;
+      				if (depthBuffer[depthIndex] > depthMaxRange || depthBuffer[depthIndex] < depthMinRange) {
+      					buffer[colorIndex] = 0;
+      				}
+      				else {
+      					buffer[colorIndex] = depthBuffer[depthIndex];
+      
+      				}
+      
+      			}
+      		}
+      	}
+      
+      	// Convert Coordinate Buffer to cv::Mat
+      	//Mapping color and depth frame taken from https://gist.github.com/UnaNancyOwen/7e2c685752e16f8e42cc#file-main-cpp-L232
+      	//colorMat = cv::Mat(depthHeight, depthWidth, CV_8UC4, &buffer[0]).clone();
+      	colorMat = Mat(colorHeight, colorWidth, CV_8UC4, &colorBuffer[0]).clone();
+      	cv::flip(colorMat, colorMat, 1);
+      
+      	// Set Coordinate Buffer to cv::Mat
+      	cv::Mat rawMat = cv::Mat(colorHeight, colorWidth, CV_16UC1, &buffer[0]).clone();
+      
+      	// Convert Raw(16bit) to 8bit
+      	rawMat.convertTo(depthMat, CV_8U, 255.0f / 8000.0f, 0.0f); // 0(black) - 255(white)
+      }
+      
+      // Show Data
+      void Kinect::show()
+      {
+      	// Show Depth
+      	showDepth();
+      
+      	// Show Color
+      	showColor();
+      
+      	// Show Infrared
+      	showInfrared();
+      }
+      
+      // Show Depth
+      inline void Kinect::showDepth()
+      {
+      	if (depthMat.empty()) {
+      		return;
+      	}
+      
+      	// Resize Image
+      	const double scale = 0.5;
+      	cv::Mat resizeMat;
+      	cv::resize(depthMat, resizeMat, cv::Size(), scale, scale);
+      
+      	// Show Depth Data
+      	cv::imshow("Depth", resizeMat);
+      }
+      
+      // Show Depth
+      inline void Kinect::showInfrared()
+      {
+      	if (infraredMat.empty()) {
+      		return;
+      	}
+      	// Show Image
+      	cv::imshow("Infrared", infraredMat);
+      }
+      
+      // Show Color
+      inline void Kinect::showColor()
+      {
+      	if (colorMat.empty()) {
+      		return;
+      	}
+      
+      	// Resize Image
+      	/*
+      	cv::Mat resizeMat;
+      	const double scale = 0.5;
+      	cv::resize(colorMat, resizeMat, cv::Size(), scale, scale);
+      	*/
+      	/*
+      	roi_areas = filterColorHSV(colorMat);
+      	for (int i = 0; i < roi_areas.size(); i++) {
+      	rectangle(colorMat, roi_areas[i], cv::Scalar(0, 255, 0), 1, 8, 0);
+      	cout << "Drawing Rectangles : " << roi_areas.size() << endl;
+      	}
+      	*/
+      	//detectObject(colorMat);
+      	//detectCircles(colorMat);
+      	detectArucoMarkers(colorMat);
+      	// Show Image
+      	//resize(colorMat, colorMat, cvSize(640, 360));
+      
+      	cv::imshow("Color", colorMat);
+      }
+      
+      
+      /*
+      肌色の領域を返す。この領域内で検出された顔のみ「顔」として扱う
+      */
+      inline cv::Rect Kinect::filterSkinColor(cv::Mat input)
+      {
+      	int largest_area = 0;
+      	int largest_contour_index = 0;
+      	cv::Rect bounding_rect;
+      	//YCrCb threshold
+      	// You can change the values and see what happens
+      	int Y_MIN = 0;
+      	int Y_MAX = 255;
+      	int Cr_MIN = 133;
+      	int Cr_MAX = 173;
+      	int Cb_MIN = 77;
+      	int Cb_MAX = 127;
+      	cv::Mat skin, mask, mask_grey;
+      	//first convert our RGB image to YCrCb
+      	cv::cvtColor(input, skin, cv::COLOR_BGR2YCrCb);
+      	mask = skin.clone();
+      	//filter the image in YCrCb color space
+      	cv::inRange(skin, cv::Scalar(Y_MIN, Cr_MIN, Cb_MIN), cv::Scalar(Y_MAX, Cr_MAX, Cb_MAX), mask);
+      	std::vector<std::vector<cv::Point>> contours; // Vector for storing contour
+      	std::vector<cv::Vec4i> hierarchy;
+      
+      	findContours(mask, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE); // Find the contours in the image
+      
+      	for (int i = 0; i< contours.size(); i++) // iterate through each contour. 
+      	{
+      		double a = cv::contourArea(contours[i], false);  //  Find the area of contour
+      		if (a>largest_area) {
+      			largest_area = a;
+      			largest_contour_index = i;                //Store the index of largest contour
+      			bounding_rect = boundingRect(contours[i]); // Find the bounding rectangle for biggest contour
+      		}
+      	}
+      	//Scalar color(255, 255, 255);
+      	//drawContours(skin, contours, largest_contour_index, color, CV_FILLED, 8, hierarchy); // Draw the largest contour using previously stored index.
+      	//rectangle(skin, bounding_rect, Scalar(0, 255, 0), 1, 8, 0);
+      	//imshow("skin", skin);
+      
+      	return bounding_rect;
+      }
+      
+      inline void Kinect::detectObject(cv::Mat input) {
+      	std::vector<Point2f> scene_corners(4);
+      	std::vector<Point2f> obj_corners(4);
+      	cv::Mat inputGray;
+      	cv::cvtColor(input, inputGray, cv::COLOR_BGR2GRAY);
+      	vector<Point2f> obj;
+      	vector<Point2f> scene;
+      
+      	obj_corners[0] = (cvPoint(0, 0));
+      	obj_corners[1] = (cvPoint(refImageGray.cols, 0));
+      	obj_corners[2] = (cvPoint(refImageGray.cols, refImageGray.rows));
+      	obj_corners[3] = (cvPoint(0, refImageGray.rows));
+      
+      	//-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
+      	int minHessian = 300;
+      
+      	cv::Ptr<cv::xfeatures2d::SURF> features = cv::xfeatures2d::SURF::create();
+      	features->setHessianThreshold(minHessian);
+      
+      	std::vector<KeyPoint> keypoints_1, keypoints_2;
+      	Mat descriptors_1, descriptors_2;
+      
+      	features->detectAndCompute(inputGray, cv::noArray(), keypoints_2, descriptors_2);
+      	features->detectAndCompute(refImageGray, cv::noArray(), keypoints_1, descriptors_1);
+      
+      	//-- Step 2: Matching descriptor vectors using FLANN matcher
+      	FlannBasedMatcher matcher;
+      	BFMatcher bf_matcher;
+      	std::vector< DMatch > matches;
+      	matcher.match(descriptors_1, descriptors_2, matches);
+      	//bf_matcher.match(descriptors_1,descriptors_2, matches)
+      	double max_dist = 0; double min_dist = 100;
+      
+      	//-- Quick calculation of max and min distances between keypoints
+      
+      	for (int i = 0; i < descriptors_1.rows; i++)
+      	{
+      		double dist = matches[i].distance;
+      		if (dist < min_dist) min_dist = dist;
+      		if (dist > max_dist) max_dist = dist;
+      	}
+      	//printf("-- Max dist : %f \\n", max_dist);
+      	//printf("-- Min dist : %f \\n", min_dist);
+      	//-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
+      	//-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
+      	//-- small)
+      	//-- PS.- radiusMatch can also be used here.
+      
+      	std::vector< DMatch > good_matches;
+      	for (int i = 0; i < descriptors_1.rows; i++)
+      	{
+      		if (matches[i].distance <= max(2 * min_dist, 0.02))
+      		{
+      			good_matches.push_back(matches[i]);
+      		}
+      	}
+      	//printf("Good matches : %d", good_matches.size());
+      
+      	//-- Draw only "good" matches
+      
+      	Mat img_matches;
+      	drawMatches(input, keypoints_1, refImage, keypoints_2,
+      		good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+      		vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+      
+      	//printf("Good matches : %d ", good_matches.size());
+      
+      	if (good_matches.size() >= 4) {
+      
+      		for (size_t i = 0; i<good_matches.size(); i++) {
+      
+      			obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+      			scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+      		}
+      
+      		cv::Mat H = findHomography(obj, scene, CV_RANSAC);
+      
+      		if (H.data != nullptr) {
+      			perspectiveTransform(obj_corners, scene_corners, H);
+      
+      			line(input, scene_corners[0], scene_corners[1], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[1], scene_corners[2], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[2], scene_corners[3], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[3], scene_corners[0], Scalar(0, 255, 0), 4);
+      		}
+      
+      	}
+      
+      }
+      
+      inline void Kinect::detectArucoMarkers(cv::Mat input) {
+      	vector< int > markerIds;
+      	vector< vector<Point2f> > markerCorners, rejectedCandidates;
+      	cv::Mat bgr;
+      	Mat output;
+      	//input.convertTo(input, -1, 1.2,-50);
+      	cv::cvtColor(input, bgr, cv::COLOR_BGRA2BGR);
+      	cv::aruco::detectMarkers(bgr, currentDict, markerCorners, markerIds, arucoParams, rejectedCandidates);
+      	//cout <<"Number of markers found : "<< markerIds.size() << endl;
+      	markersDetected.clear();
+      
+      	if (markerIds.size() > 0) {
+      		depthString.str(std::string());
+      		cv::aruco::drawDetectedMarkers(bgr, markerCorners, markerIds, CvScalar(0, 0, 255));
+      		for (int i = 0; i < markerIds.size(); i++) {
+      			Vec3i markerInfo;
+      			markerInfo[0] = markerIds[i];
+      			markerInfo[1] = (int)((markerCorners[i][0].x + markerCorners[i][1].x + markerCorners[i][2].x + markerCorners[i][3].x) / 4) - rangeTopLeft.x;
+      			markerInfo[2] = (int)((markerCorners[i][0].y + markerCorners[i][1].y + markerCorners[i][2].y + markerCorners[i][3].y) / 4) - rangeTopLeft.y;
+      			markersDetected.push_back(markerInfo);
+      			depthString << to_string(markerInfo[0]) << "," << to_string(markerInfo[1]) << "," << to_string(markerInfo[2]) << ",";
+      		}
+      	}
+      	else {
+      		markerLostCounter++;
+      		if (markerLostCounter > 50) {
+      			depthString.str(std::string());
+      			markerLostCounter = 0;
+      		}
+      	}
+      	if (rejectedCandidates.size() > 0) {
+      		cv::aruco::drawDetectedMarkers(bgr, rejectedCandidates);
+      	}
+      	cv::cvtColor(bgr, output, cv::COLOR_BGR2BGRA);
+      	resize(output, output, cvSize(640, 360));
+      }
+      
+      inline void Kinect::detectCircles(cv::Mat input) {
+      	Mat inputGray;
+      	cvtColor(input, inputGray, CV_BGR2GRAY);
+      
+      	// Reduce the noise so we avoid false circle detection
+      	GaussianBlur(inputGray, inputGray, Size(9, 9), 2, 2);
+      	vector<Vec3f> circles;
+      
+      	// Apply the Hough Transform to find the circles
+      	HoughCircles(inputGray, circles, CV_HOUGH_GRADIENT, 1, 30, 100, 50, 0, 200);
+      	//printf("circles size : %d", circles.size());
+      	// Draw the circles detected
+      	circleDetected[0] = 0;
+      	circleDetected[1] = 0;
+      	circleDetected[2] = 0;
+      
+      	for (size_t i = 0; i < circles.size(); i++)
+      	{
+      		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+      		int radius = cvRound(circles[i][2]);
+      
+      		if (center.x > rangeTopLeft.x && center.x < rangeBottomRight.x && center.y > rangeTopLeft.y && center.y < rangeBottomRight.y) {
+      			//circleDetected = circles[i];
+      			circle(input, center, 3, Scalar(0, 255, 0), -1, 8, 0);// circle center     
+      			circle(input, center, radius, Scalar(0, 0, 255), 3, 8, 0);// circle outline
+      			circleDetected[0] = center.x - rangeTopLeft.x;
+      			circleDetected[1] = center.y - rangeTopLeft.y;
+      			circleDetected[2] = radius;
+      
+      			//cout << "center : " << center << "\\nradius : " << radius << endl;
+      
+      		}
+      		else {
+      
+      		}
+      
+      	}
+      
+      }
+      
+      /*
+      色検出。現在は青を探す。
+      */
+      inline vector<Rect> Kinect::filterColorHSV(cv::Mat input)
+      {
+      	int largest_area = 0;
+      	int largest_contour_index = 0;
+      
+      	cv::Scalar   min(90, 190, 80);
+      	cv::Scalar   max(170, 255, 255);
+      	cv::Mat mask, mask1, mask2, mask_grey;
+      	cv::Mat hsv_image;
+      	cv::cvtColor(input, hsv_image, cv::COLOR_BGR2HSV);
+      	mask1 = input.clone(); mask2 = input.clone();
+      	//filter the image in BGR color space
+      	cv::inRange(hsv_image, min, max, mask);
+      	//cv::inRange(hsv_image, cv::Scalar(55, 100, 50), cv::Scalar(65, 255, 255), mask1);
+      	//cv::inRange(hsv_image, cv::Scalar(50, 100, 50), cv::Scalar(70, 255, 255), mask2);
+      	std::vector<std::vector<cv::Point>> contours; // Vector for storing contour
+      	std::vector<cv::Vec4i> hierarchy;
+      	//mask = mask1 | mask2;
+      	findContours(mask, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE); // Find the contours in the image
+      	vector<Rect> bounding_rect(contours.size());
+      
+      	for (int i = 0; i< contours.size(); i++) // iterate through each contour. 
+      	{
+      		double a = contourArea(contours[i], false);  //  Find the area of contour
+      													 /*
+      													 if (a>largest_area) {
+      													 largest_area = a;
+      													 largest_contour_index = i;                //Store the index of largest contour
+      													 bounding_rect = boundingRect(contours[i]); // Find the bounding rectangle for biggest contour
+      													 }
+      													 */
+      
+      		bounding_rect.push_back(boundingRect(contours[i]));
+      
+      	}
+      	cv::Scalar color(255, 255, 255);
+      	drawContours(mask, contours, largest_contour_index, color, CV_FILLED, 8, hierarchy); // Draw the largest contour using previously stored index.
+      																						 //cv::imshow("filtered", mask);
+      	return bounding_rect;
+      }
+      
+      void Kinect::mouseCallback(int event, int x, int y, int flags, void* userdata) {
+      	if (event == cv::EVENT_LBUTTONDOWN)
+      	{
+      		Kinect* self = static_cast<Kinect*>(userdata);
+      		self->doMouseCallback(event, x, y, flags);
+      	}
+      }
+      
+      void Kinect::doMouseCallback(int event, int x, int y, int flags) {
+      	if (flags == (cv::EVENT_FLAG_LBUTTON))
+      	{
+      		rangeTopLeft.x = x;
+      		rangeTopLeft.y = y;
+      		std::cout << "Top left range perimeter is clicked for color Image - position (" << x << ", " << y << ")" << std::endl;
+      	}
+      
+      	if (flags == (cv::EVENT_FLAG_LBUTTON + cv::EVENT_FLAG_SHIFTKEY))
+      	{
+      		rangeBottomRight.x = x;
+      		rangeBottomRight.y = y;
+      		rangeWidth = rangeBottomRight.x - rangeTopLeft.x;
+      		rangeHeight = rangeBottomRight.y - rangeTopLeft.y;
+      		std::cout << "Bottom rigth range perimeter is clicked for projector Image - position (" << x << ", " << y << ")" << std::endl;
+      	}
+      
+      }
+      
+      BSTR Kinect::getFullPath(LPCWSTR relative_path) {
+      	BSTR full_path;
+      	DWORD  retval = 0;
+      	BOOL   success;
+      	TCHAR  buffer[BUFSIZE] = TEXT("");
+      	TCHAR  buf[BUFSIZE] = TEXT("");
+      	TCHAR** lppPart = { NULL };
+      
+      	retval = GetFullPathName(relative_path,
+      		BUFSIZE,
+      		buffer,
+      		lppPart);
+      	if (retval == 0)
+      	{
+      		// Handle an error condition.
+      		printf("GetFullPathName failed (%d)\\n", GetLastError());
+      
+      	}
+      	else
+      	{
+      		_tprintf(TEXT("The full path name is:  %s\\n"), buffer);
+      		if (lppPart != NULL && *lppPart != 0)
+      		{
+      			_tprintf(TEXT("The final component in the path name is:  %s\\n"), *lppPart);
+      		}
+      	}
+      
+      	full_path = CComBSTR(4096, buffer);
+      	return full_path;
+      }
+      
+      std::string Kinect::bstr_to_str(BSTR source) {
+      	//source = L"lol2inside";
+      	_bstr_t wrapped_bstr = _bstr_t(source);
+      	int length = wrapped_bstr.length();
+      	char* char_array = new char[length];
+      	strcpy_s(char_array, length + 1, wrapped_bstr);
+      	return char_array;
+      }
+      
+      void Kinect::drawTransPinP(cv::Mat &img_dst, const cv::Mat transImg, const cv::Mat baseImg, std::vector<cv::Point2f> tgtPt)
+      {
+      	cv::Mat img_rgb, img_aaa, img_1ma;
+      	std::vector<cv::Mat>planes_rgba, planes_rgb, planes_aaa, planes_1ma;
+      	int maxVal = pow(2, 8 * baseImg.elemSize1()) - 1;
+      
+      	//透過画像はRGBA, 背景画像はRGBのみ許容。ビット深度が同じ画像のみ許容
+      	if (transImg.data == NULL || baseImg.data == NULL || transImg.channels()<4 || baseImg.channels()<3 || (transImg.elemSize1() != baseImg.elemSize1()))
+      	{
+      		img_dst = cv::Mat(100, 100, CV_8UC3);
+      		img_dst = cv::Scalar::all(maxVal);
+      
+      		return;
+      	}
+      
+      	//書き出し先座標が指定されていない場合は背景画像の中央に配置する
+      	if (tgtPt.size()<4)
+      	{
+      		//座標指定(背景画像の中心に表示する）
+      		int ltx = (baseImg.cols - transImg.cols) / 2;
+      		int lty = (baseImg.rows - transImg.rows) / 2;
+      		int ww = transImg.cols;
+      		int hh = transImg.rows;
+      
+      		tgtPt.push_back(cv::Point2f(ltx, lty));
+      		tgtPt.push_back(cv::Point2f(ltx + ww, lty));
+      		tgtPt.push_back(cv::Point2f(ltx + ww, lty + hh));
+      		tgtPt.push_back(cv::Point2f(ltx, lty + hh));
+      	}
+      
+      	//変形行列を作成
+      	std::vector<cv::Point2f>srcPt;
+      	srcPt.push_back(cv::Point2f(0, 0));
+      	srcPt.push_back(cv::Point2f(transImg.cols - 1, 0));
+      	srcPt.push_back(cv::Point2f(transImg.cols - 1, transImg.rows - 1));
+      	srcPt.push_back(cv::Point2f(0, transImg.rows - 1));
+      	cv::Mat mat = cv::getPerspectiveTransform(srcPt, tgtPt);
+      
+      	//出力画像と同じ幅・高さのアルファ付き画像を作成
+      	cv::Mat alpha0(baseImg.rows, baseImg.cols, transImg.type());
+      	alpha0 = cv::Scalar::all(0);
+      	cv::warpPerspective(transImg, alpha0, mat, alpha0.size(), cv::INTER_CUBIC, cv::BORDER_TRANSPARENT);
+      
+      	//チャンネルに分解
+      	cv::split(alpha0, planes_rgba);
+      
+      	//RGBA画像をRGBに変換   
+      	planes_rgb.push_back(planes_rgba[0]);
+      	planes_rgb.push_back(planes_rgba[1]);
+      	planes_rgb.push_back(planes_rgba[2]);
+      	merge(planes_rgb, img_rgb);
+      
+      	//RGBA画像からアルファチャンネル抽出   
+      	planes_aaa.push_back(planes_rgba[3]);
+      	planes_aaa.push_back(planes_rgba[3]);
+      	planes_aaa.push_back(planes_rgba[3]);
+      	merge(planes_aaa, img_aaa);
+      
+      	//背景用アルファチャンネル   
+      	planes_1ma.push_back(maxVal - planes_rgba[3]);
+      	planes_1ma.push_back(maxVal - planes_rgba[3]);
+      	planes_1ma.push_back(maxVal - planes_rgba[3]);
+      	merge(planes_1ma, img_1ma);
+      
+      	img_dst = img_rgb.mul(img_aaa, 1.0 / (double)maxVal) + baseImg.mul(img_1ma, 1.0 / (double)maxVal);
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:00:34.526Z"
+updatedAt: "2017-11-19T10:00:41.715Z"

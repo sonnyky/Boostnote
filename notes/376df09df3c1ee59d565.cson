@@ -1,0 +1,29 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Snippet to draw the axes on an Aruco marker"
+description: "Snippet to draw the axes on an Aruco marker"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      vector< Point3f > axisPoints;
+      axisPoints.push_back(Point3f(0, 0, 0));
+      axisPoints.push_back(Point3f(5, 0, 0));
+      axisPoints.push_back(Point3f(0, 5, 0));
+      axisPoints.push_back(Point3f(0, 0, 5));
+      vector< Point2f > imagePoints;
+      
+      // Using camera matrix and distortion coefficients, along with estimated rotation and translation vectors
+      // to project a new point based on the marker coordinate system
+      projectPoints(axisPoints, rvecs[i], tvecs[i], cameraIntrinsics, distortionCoeffs, imagePoints);
+      
+      circle(bgr, cvPoint(imagePoints[1].x, imagePoints[1].y), 10, cvScalar(255, 255, 0), 3, 8, 0);
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:59:43.877Z"
+updatedAt: "2017-11-19T09:59:59.768Z"

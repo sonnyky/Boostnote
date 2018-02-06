@@ -1,0 +1,41 @@
+type: "SNIPPET_NOTE"
+folder: "01ec837f67a924176a83"
+title: "For every point in a point series, check if the distance to a reference point is greater than a threshold. if so, lump it in a different group. Up to max of 5 groups. the following for loop is repeated for all available data points"
+description: "For every point in a point series, check if the distance to a reference point is greater than a threshold. if so, lump it in a different group. Up to max of 5 groups. the following for loop is repeated for all available data points"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      for (int i = 0; i < 5; i++) {
+      				if (vy[i].size() == 0) {
+      					vy[i].push_back(uy);
+      					vx[i].push_back(ux);
+      					break;
+      				}
+      				
+      				double thisPtDist = DistanceOfPointsYDirection(ux, uy,vx[i][0], vy[i][0]);
+      				
+      				if (thisPtDist > MAXIMUM_POINT_DISTANCE_Y_DIRECTION &&  i < 4) {
+      					if (vx[i + 1].size() == 0) {
+      						vy[i + 1].push_back(uy);
+      						vx[i + 1].push_back(ux);
+      						break;
+      					}
+      					else { continue; }
+      				}
+      				else {
+      					vy[i].push_back(uy);
+      					vx[i].push_back(ux);
+      					break;
+      				}
+      				
+      			}
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-12-04T13:36:49.188Z"
+updatedAt: "2017-12-04T13:38:37.535Z"

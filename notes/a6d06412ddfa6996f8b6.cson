@@ -1,0 +1,49 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Detect ponds"
+description: "Detect ponds"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      bool validPoint = true;
+      float diff = 0;
+      //TODO : Refactor point, reduce loop to minimal
+      if(y < 10 || x < 10 || y  > 410 || x > 500)
+      {
+          continue;
+      }
+      for (int i = y - 10; i < y + 10; i++)
+      {
+          for (int j = x - 10; j < x + 10; j++)
+          {
+              int neighborDepthIndex = ((i) * 512) + (j);
+      
+              if (!mockMode)
+              {
+                  neighborDepth = depthData[neighborDepthIndex];
+              }
+              else
+              {
+                  neighborDepth = dummyHeightValues[x, height - y - 1] * Constants.HEIGHTMAP_MAX_HEIGHT;
+              }
+              diff += (depth - neighborDepth);
+              if (neighborDepth > depth)
+              {
+                  validPoint = false;
+              }
+          }
+      }
+      if (diff > Constants.POND_MIN_THRESHOLD && diff < Constants.POND_MAX_THRESHOLD && validPoint)
+      {
+          ponds.Add(thisPixelPos);
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:59:09.701Z"
+updatedAt: "2017-11-19T09:59:16.115Z"

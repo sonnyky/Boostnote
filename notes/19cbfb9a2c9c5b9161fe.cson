@@ -1,0 +1,61 @@
+type: "SNIPPET_NOTE"
+folder: "e76fca19ace6c60d4076"
+title: "Detect Kinect gesture"
+description: "Detect Kinect gesture"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      public bool DetectTargetGestureOnBodies(string gestureName, string bodyTrackingId)
+          {
+              bool gestureDetected = false;
+              foreach (Gesture gesture in _VGB_Source.Gestures)
+              {
+                  if (detectedGestures != null)
+                  {
+                      if (gesture.GestureType == GestureType.Discrete)
+                      {
+                          DiscreteGestureResult result = null;
+                          detectedGestures.TryGetValue(gesture, out result);
+                          if (result != null)
+                          {
+                              if (gesture.Name == gestureName && _VGB_Source.TrackingId.ToString() == bodyTrackingId && result.Detected)
+                              {
+                                  gestureDetected = true;
+                              }
+                          }
+                      }
+                  }
+                  
+                  if (detectedContinuousGestures != null)
+                  {
+                      if (gesture.GestureType == GestureType.Continuous)
+                      {
+                          ContinuousGestureResult result = null;
+                          detectedContinuousGestures.TryGetValue(gesture, out result);
+                        
+                          Debug.Log(gesture.Name);
+                          if (result != null)
+                          {
+                              Debug.Log(result.Progress);
+                              if (gesture.Name == gestureName && _VGB_Source.TrackingId.ToString() == bodyTrackingId)
+                              {
+                                  gestureDetected = false;
+                              }
+                          }
+                      }
+                  }
+              }
+      
+           
+              return gestureDetected;
+          }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:02:26.026Z"
+updatedAt: "2017-11-19T10:02:32.620Z"

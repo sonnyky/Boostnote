@@ -1,0 +1,22 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Background substraction"
+description: "Background substraction"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      inline void Kinect::backgroundSubstraction(Mat input) {
+      	//update the background model
+      	pMOG2->apply(input, fgMaskMOG2);
+      	imshow("FG Mask MOG 2", fgMaskMOG2);
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-25T14:20:41.748Z"
+updatedAt: "2017-11-25T14:20:49.188Z"

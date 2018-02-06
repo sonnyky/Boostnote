@@ -1,0 +1,21 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Send data as char through OSC"
+description: "Send data as char through OSC"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      string tempString = depthString.str();
+      char *toSendText = new char[tempString.size() + 1];
+      std::strcpy(toSendText, tempString.c_str());
+      transmitSocket.Send(toSendText, strlen(toSendText) + 1);
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:01:58.612Z"
+updatedAt: "2017-11-19T10:02:05.972Z"

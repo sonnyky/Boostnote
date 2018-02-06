@@ -1,0 +1,38 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Scan if inside pond"
+description: "Scan if inside pond"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      // Scan in a circular fashion to determine if point is inside a pond.
+        bool ScanCircularRay(Vector3 objectPos)
+          {
+              int hitTimes = 0;
+              for (int i = 0; i < 360; i = i + 10)
+              {
+                  Quaternion startAngle = Quaternion.Euler(0, i, 0);
+                  Quaternion angle = transform.rotation * startAngle;
+                  Vector3 tdirection = angle * Vector3.forward;
+                  Ray ray = new Ray(objectPos + Vector3.up * 10f, tdirection);
+                  RaycastHit hit;
+      
+                  if (Physics.Raycast(ray, out hit, 70f, 1<<8))
+                  {
+                      hitTimes++;
+                  }
+               
+              }
+              if (hitTimes > 25) return true;
+              return false;
+          }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:59:24.938Z"
+updatedAt: "2017-11-19T09:59:32.351Z"

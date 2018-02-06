@@ -1,0 +1,106 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Detect object with SURF"
+description: "Detect object with SURF"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      inline void Kinect::detectObject(cv::Mat input) {
+      	std::vector<Point2f> scene_corners(4);
+      	std::vector<Point2f> obj_corners(4);
+      	cv::Mat inputGray;
+      	cv::cvtColor(input, inputGray, cv::COLOR_BGR2GRAY);
+      	vector<Point2f> obj;
+      	vector<Point2f> scene;
+      
+      	obj_corners[0] = (cvPoint(0, 0));
+      	obj_corners[1] = (cvPoint(refImageGray.cols, 0));
+      	obj_corners[2] = (cvPoint(refImageGray.cols, refImageGray.rows));
+      	obj_corners[3] = (cvPoint(0, refImageGray.rows));
+      
+      	//-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
+      	int minHessian = 300;
+      
+      	cv::Ptr<cv::xfeatures2d::SURF> features = cv::xfeatures2d::SURF::create();
+      	features->setHessianThreshold(minHessian);
+      
+      	std::vector<KeyPoint> keypoints_1, keypoints_2;
+      	Mat descriptors_1, descriptors_2;
+      
+      	features->detectAndCompute(inputGray, cv::noArray(), keypoints_2, descriptors_2);
+      	features->detectAndCompute(refImageGray, cv::noArray(), keypoints_1, descriptors_1);
+      
+      	//-- Step 2: Matching descriptor vectors using FLANN matcher
+      	FlannBasedMatcher matcher;
+      	BFMatcher bf_matcher;
+      	std::vector< DMatch > matches;
+      	matcher.match(descriptors_1, descriptors_2, matches);
+      	//bf_matcher.match(descriptors_1,descriptors_2, matches)
+      	double max_dist = 0; double min_dist = 100;
+      
+      	//-- Quick calculation of max and min distances between keypoints
+      
+      	for (int i = 0; i < descriptors_1.rows; i++)
+      	{
+      		double dist = matches[i].distance;
+      		if (dist < min_dist) min_dist = dist;
+      		if (dist > max_dist) max_dist = dist;
+      	}
+      	//printf("-- Max dist : %f \\n", max_dist);
+      	//printf("-- Min dist : %f \\n", min_dist);
+      	//-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
+      	//-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
+      	//-- small)
+      	//-- PS.- radiusMatch can also be used here.
+      
+      	std::vector< DMatch > good_matches;
+      	for (int i = 0; i < descriptors_1.rows; i++)
+      	{
+      		if (matches[i].distance <= max(2 * min_dist, 0.02))
+      		{
+      			good_matches.push_back(matches[i]);
+      		}
+      	}
+      	//printf("Good matches : %d", good_matches.size());
+      
+      	//-- Draw only "good" matches
+      
+      	Mat img_matches;
+      	drawMatches(input, keypoints_1, refImage, keypoints_2,
+      		good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+      		vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+      
+      	//printf("Good matches : %d ", good_matches.size());
+      
+      	if (good_matches.size() >= 4) {
+      
+      		for (size_t i = 0; i<good_matches.size(); i++) {
+      
+      			obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+      			scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+      		}
+      
+      		cv::Mat H = findHomography(obj, scene, CV_RANSAC);
+      
+      		if (H.data != nullptr) {
+      			perspectiveTransform(obj_corners, scene_corners, H);
+      
+      			line(input, scene_corners[0], scene_corners[1], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[1], scene_corners[2], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[2], scene_corners[3], Scalar(0, 255, 0), 4);
+      			line(input, scene_corners[3], scene_corners[0], Scalar(0, 255, 0), 4);
+      		}
+      
+      	}
+      
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-25T14:16:56.234Z"
+updatedAt: "2017-11-25T14:17:05.294Z"

@@ -1,0 +1,32 @@
+type: "SNIPPET_NOTE"
+folder: "67ffeea8d0c924e35c48"
+title: "fragment layout"
+description: "fragment layout"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      <fragment
+                      android:id="@+id/listFragment"
+                      android:layout_width="match_parent"
+                      android:layout_height="150dp"
+                      android:name="graphitragment"
+                      android:layout_below="@+id/btnSpeak"
+                      tools:layout="@layout/one_fragment" />
+                      
+         <android.support.v4.view.ViewPager xmlns:android="http://schemas.android.com/apk/res/android"
+                      xmlns:tools="http://schemas.android.com/tools"
+                      android:id="@+id/pager"
+                      android:layout_width="match_parent"
+                      android:layout_height="150dp"
+                      tools:context=".MainActivity"
+                      android:layout_below="@+id/textDisplay" />
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:57:22.382Z"
+updatedAt: "2017-11-19T10:57:29.524Z"

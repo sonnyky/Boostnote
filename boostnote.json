@@ -1,0 +1,55 @@
+{
+  "folders": [
+    {
+      "key": "2f65dec1aaf783be9b69",
+      "color": "#1278BD",
+      "name": "Default"
+    },
+    {
+      "key": "52f7a89aa941701f1c18",
+      "color": "#B013A4",
+      "name": "SandParty"
+    },
+    {
+      "key": "e76fca19ace6c60d4076",
+      "color": "#FF8E00",
+      "name": "Kinect"
+    },
+    {
+      "key": "da4693d7ad2ea2038215",
+      "color": "#2BA5F7",
+      "name": "OpenCV"
+    },
+    {
+      "key": "67ffeea8d0c924e35c48",
+      "color": "#B013A4",
+      "name": "Android"
+    },
+    {
+      "key": "5313a1588c95075d1c94",
+      "color": "#30D5C8",
+      "name": "Swift"
+    },
+    {
+      "key": "cdf8a4b93828814c84f9",
+      "color": "#3FD941",
+      "name": "Unity"
+    },
+    {
+      "key": "0a9f35eade47f6b5b756",
+      "color": "#B013A4",
+      "name": "Windows"
+    },
+    {
+      "key": "b439fa1fe45508edfa65",
+      "color": "#3FD941",
+      "name": "Python"
+    },
+    {
+      "key": "01ec837f67a924176a83",
+      "color": "#B013A4",
+      "name": "LaserRangeFinder"
+    }
+  ],
+  "version": "1.0"
+}

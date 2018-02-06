@@ -1,0 +1,31 @@
+type: "SNIPPET_NOTE"
+folder: "67ffeea8d0c924e35c48"
+title: "Kotlin snippet of Codelab from GDGTokyo. 課題１のOnCreateの一部"
+description: "Kotlin snippet of Codelab from GDGTokyo. 課題１のOnCreateの一部"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+       mText = findViewById<TextView>(R.id.text)
+              val mClockData = ClockLegacy(applicationContext)
+              val observer = object : LifecycleObserver {
+                  @OnLifecycleEvent(Lifecycle.Event.ON_START)
+                  fun calledWhenOnStart(source: LifecycleOwner) {
+                      mClockData.setClockListener(mListener)
+                  }
+      
+                  @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+                  fun calledWhenOnStop(source: LifecycleOwner) {
+                      mClockData.removeClockListener()
+                  }
+              }
+              lifecycle.addObserver(observer)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2018-01-25T06:52:35.477Z"
+updatedAt: "2018-01-25T08:07:18.117Z"

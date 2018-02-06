@@ -1,0 +1,23 @@
+type: "SNIPPET_NOTE"
+folder: "67ffeea8d0c924e35c48"
+title: "Using Android plugin in Unity"
+description: "Using Android plugin in Unity"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+       //The following code only works with the Android voice plugin
+       AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+      activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+      javaClass = new AndroidJavaClass("tinker.unityplugin.NativePlugin");
+      speechClass = new AndroidJavaClass("tinker.unityplugin.SpeechRecognizerPlugin");
+      javaClass.CallStatic("showToast", "Test Android Native Plugin");
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:24:39.926Z"
+updatedAt: "2017-11-19T10:24:48.014Z"

@@ -1,0 +1,16 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Accessing elements of OpenCV CV_8UC1 cv::Mat. You have to specify that the elements are unsigned char, between 0 and 255 , otherwise they will be char (signed), from -128 to 127"
+description: "Accessing elements of OpenCV CV_8UC1 cv::Mat. You have to specify that the elements are unsigned char, between 0 and 255 , otherwise they will be char (signed), from -128 to 127"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: "(int) image.at<uchar>(row,column);"
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:02:51.467Z"
+updatedAt: "2017-11-19T10:02:59.110Z"

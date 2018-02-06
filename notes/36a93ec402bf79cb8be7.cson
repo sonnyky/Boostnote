@@ -1,0 +1,26 @@
+type: "SNIPPET_NOTE"
+folder: "5313a1588c95075d1c94"
+title: "Snippet to show preview capture when taking video"
+description: "Snippet to show preview capture when taking video"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      //
+      
+      // Initialize the video preview layer and add it as a sublayer to the viewPreview view's layer.
+              
+      videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+      videoPreviewLayer?.connection.videoOrientation = AVCaptureVideoOrientation.landscapeLeft // カメラの向き
+      videoPreviewLayer?.videoGravity = AVLayerVideoGravityResizeAspectFill
+      videoPreviewLayer?.frame = view.layer.bounds
+      view.layer.addSublayer(videoPreviewLayer!)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:25:07.241Z"
+updatedAt: "2017-11-19T10:25:17.765Z"

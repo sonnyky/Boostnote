@@ -1,0 +1,446 @@
+type: "SNIPPET_NOTE"
+folder: "5313a1588c95075d1c94"
+title: "Controller to upload drawings to AWS S3"
+description: "Controller to upload drawings to AWS S3"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      //
+      //  ViewController.swift
+      //  magiccanvas_camera
+      //
+      //  Created by Takashi Kishida on 2017/03/07.
+      //  Copyright © 2017年 placeholder. All rights reserved.
+      //
+      
+      import UIKit
+      import AWSS3
+      import SVProgressHUD
+      import AVFoundation
+      
+      class ViewController: UIViewController,UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVCaptureMetadataOutputObjectsDelegate {
+      
+          @IBOutlet weak var cameraView: UIImageView!
+          @IBOutlet weak var uploadButton: UIButton!
+          @IBOutlet weak var photoButton: UIButton!
+          @IBOutlet weak var recognitionStatus: UILabel!
+          
+          @IBOutlet weak var qrDetectionIndicator: UIActivityIndicatorView!
+          var captureSession:AVCaptureSession?
+      
+          var videoPreviewLayer:AVCaptureVideoPreviewLayer?
+          var qrCodeFrameView:UIView?
+          
+          var bucketName = ""
+          var detectedMaskType = ""
+          var detectedAnimationType = ""
+          
+          // タップ識別用タグ
+          let tagSampleImageView = 1
+          
+          @IBAction func backToTop(segue: UIStoryboardSegue) {}
+      
+          override func viewDidLoad() {
+              super.viewDidLoad()
+              // Do any additional setup after loading the view, typically from a nib.
+              uploadButton.isEnabled = false
+              photoButton.isEnabled = false;
+              qrDetectionIndicator.startAnimating();
+              
+              // cameraViewをタッチ可能に
+              cameraView.isUserInteractionEnabled = true;
+              cameraView.tag = tagSampleImageView
+              
+               print(OpencvWrapper.openCVVersionString())
+              
+              // Start video capture
+              // Get an instance of the AVCaptureDevice class to initialize a device object and provide the video as the media type parameter.
+              let captureDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeVideo)
+              
+              do {
+                  // Get an instance of the AVCaptureDeviceInput class using the previous device object.
+                  let input = try AVCaptureDeviceInput(device: captureDevice)
+                  
+                  // Initialize the captureSession object.
+                  captureSession = AVCaptureSession()
+                  
+                  // Set the input device on the capture session.
+                  captureSession?.addInput(input)
+                  
+              } catch {
+                  // If any error occurs, simply print it out and don't continue any more.
+                  print(error)
+                  return
+              }
+              
+              // Initialize a AVCaptureMetadataOutput object and set it as the output device to the capture session.
+              let captureMetadataOutput = AVCaptureMetadataOutput()
+              captureSession?.addOutput(captureMetadataOutput)
+              
+              // Set delegate and use the default dispatch queue to execute the call back
+              captureMetadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
+              captureMetadataOutput.metadataObjectTypes = [AVMetadataObjectTypeQRCode]
+              
+              // Start video capture.
+              captureSession?.startRunning()
+              
+          }
+          
+      
+          override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+              super.touchesEnded(touches, with: event)
+              for touch: UITouch in touches {
+                  let tag = touch.view!.tag
+                  switch tag {
+                  case tagSampleImageView:
+                      print("tapped")
+                      //cameraView.transform.rotated(by: 45.0)
+                      // imageViewをタップしたら反転する
+                      UIView.animate(withDuration: 0.5, animations: {
+                          //self.cameraView.transform = CGAffineTransform(rotationAngle: (180.0 * CGFloat(M_PI)) / 180.0)
+                          self.cameraView.transform = self.cameraView.transform.scaledBy(x: -1, y: 1);
+                          //self.cameraView.transform = CGAffineTransform(rotationAngle: CGFloat(M_PI));
+                      })
+                  default:
+                      break
+                  }
+              }
+          }
+      
+          override func didReceiveMemoryWarning() {
+              super.didReceiveMemoryWarning()
+              // Dispose of any resources that can be recreated.
+          }
+          
+          @IBAction func bCameraStart(_ sender: Any) {
+              
+              let sourceType:UIImagePickerControllerSourceType = UIImagePickerControllerSourceType.camera
+              // カメラが利用可能かチェック
+              if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera){
+                  // インスタンスの作成
+                  let cameraPicker = UIImagePickerController()
+                  cameraPicker.sourceType = sourceType
+                  cameraPicker.delegate = self
+                  self.present(cameraPicker, animated: true, completion: nil)
+                  
+              }
+          }
+          
+          //　撮影が完了時した時に呼ばれる
+          func imagePickerController(_ imagePicker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
+              
+              if let pickedImage = info[UIImagePickerControllerOriginalImage] as? UIImage {
+                  
+                  // the mask image must have the same dimensions as the image taken by the iPad camera. Currently it's 2448x3264. Double check if Opencv throws an error
+                  let maskFileName = detectedMaskType + ".png"
+                  let maskingImage = UIImage(named: maskFileName)
+                  let resultImage = maskImage(image: pickedImage, mask: maskingImage!)
+                  //let resultImage = OpencvWrapper.maskImage(pickedImage, maskImage)
+                  cameraView.contentMode = .scaleAspectFit
+                  cameraView.image = resultImage
+                  
+              }
+              
+              //閉じる処理
+              imagePicker.dismiss(animated: true, completion: nil)
+              
+              uploadButton.isEnabled = true
+              
+          }
+          
+          // 撮影がキャンセルされた時に呼ばれる
+          func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+              picker.dismiss(animated: true, completion: nil)
+          }
+          
+          func getDocumentsDirectory() -> URL {
+              let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+              let documentsDirectory = paths[0]
+              return documentsDirectory
+          }
+       
+          // 未使用。カメラロール保存用
+          @IBAction func bSavePic(_ sender: Any) {
+      
+              let image:UIImage! = cameraView.image
+              
+              if image != nil {
+                  
+                  
+                  UIImageWriteToSavedPhotosAlbum(image!, self, #selector(ViewController.image(_:didFinishSavingWithError:contextInfo:)), nil)
+                  
+                  showAlert(title:"Save",msg:"保存が完了しました")
+              }
+          }
+          
+          // 書き込み完了結果の受け取り
+          func image(_ image: UIImage, didFinishSavingWithError error: NSError!, contextInfo: UnsafeMutableRawPointer) {
+              print("1")
+              
+              if error != nil {
+                  print(error.code)
+              }
+      
+          }
+      
+          // 未使用。アルバム呼び出し用
+          @IBAction func bSaveAlbum(_ sender: Any) {
+      
+              let sourceType:UIImagePickerControllerSourceType = UIImagePickerControllerSourceType.photoLibrary
+              
+              if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary){
+                  // インスタンスの作成
+                  let cameraPicker = UIImagePickerController()
+                  cameraPicker.sourceType = sourceType
+                  cameraPicker.delegate = self
+                  self.present(cameraPicker, animated: true, completion: nil)
+                  
+              }
+          }
+          
+          func showAlert(title:String, msg:String) {
+              
+              // アラートを作成
+              let alert = UIAlertController(
+                  title: title,
+                  message: msg,
+                  preferredStyle: .alert)
+              
+              // アラートにボタンをつける
+              alert.addAction(UIAlertAction(title: "OK", style: .default))
+              
+              // アラート表示
+              self.present(alert, animated: true, completion: nil)
+          }
+      
+          
+          @IBAction func uploadS3(_ sender: Any) {
+              print("take photo")
+            //  generateImageUrl(cameraView.image)
+              uploadImage(cameraView.image!)
+          }
+          
+          @IBAction func uploadText(_ sender: Any) {
+              print("upload S3")
+              SVProgressHUD.show()
+              uploadButton.isEnabled = false
+              
+              let docDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] as String
+              let text = "Upload File."
+              let fileName = "test.txt"
+              let filePath = "\\(docDir)/\\(fileName)"
+              print (filePath)
+              try! text.write(toFile: filePath, atomically: true, encoding: String.Encoding.utf8)
+              
+              let transferManager = AWSS3TransferManager.default()
+              
+              let uploadRequest = AWSS3TransferManagerUploadRequest()
+              uploadRequest?.bucket = "magic-canvas"
+              uploadRequest?.key = "sample.txt"
+              uploadRequest?.body = NSURL(string: "file://\\(filePath)")! as URL
+              uploadRequest?.acl = .publicRead
+              uploadRequest?.contentType = "text/plain"
+              
+              
+              transferManager.upload(uploadRequest!).continueWith { (task: AWSTask) -> AnyObject? in
+                  if task.error == nil {
+                      print("success")
+                  } else {
+                      print("fail")
+                  }
+                  SVProgressHUD.dismiss()
+                  self.uploadButton.isEnabled = true
+                  return nil
+              }
+          }
+          
+          private func generateImageUrl(_ uploadImage: UIImage) -> URL {
+              let imageURL = URL(fileURLWithPath: NSTemporaryDirectory().appendingFormat("upload.png"))
+              if let pngData = UIImagePNGRepresentation(uploadImage) {
+                  try! pngData.write(to: imageURL, options: [.atomicWrite])
+              }
+              return imageURL
+          }
+          
+          public func uploadImage(_ uploadImage: UIImage) {
+      
+              SVProgressHUD.show()
+              uploadButton.isEnabled = false
+              let formatter = DateFormatter()
+              formatter.dateFormat = "yyyy-MM-dd-HHmmssSSS"
+              // default image size from iPad camera is 3264x2448. here we resize so it's smaller
+              let imgSize = CGSize.init(width:1024, height:768)
+              var imageName = "\\(formatter.string(from: Date())).png"
+              imageName = imageName.replacingOccurrences(of: " ", with: "")
+              imageName = imageName.replacingOccurrences(of: ":", with: "")
+              imageName = imageName.replacingOccurrences(of: "+", with: "")
+              
+              let smallerImage = resizeImage(image: uploadImage, targetSize: imgSize)
+              
+              let imageData = UIImagePNGRepresentation(smallerImage)
+              let imagePath = NSTemporaryDirectory().appendingFormat(imageName)
+              
+              do {
+                  try? imageData?.write(to: URL(fileURLWithPath: imagePath))
+              }
+              
+              let transferManager = AWSS3TransferManager.default()
+              let uploadRequest = AWSS3TransferManagerUploadRequest()
+              uploadRequest?.bucket = bucketName + "/" + detectedMaskType + "/" + detectedAnimationType
+              uploadRequest?.key = imageName
+              uploadRequest?.contentType = "image/png"
+              uploadRequest?.body = URL(fileURLWithPath: imagePath)
+              print(uploadRequest as Any)
+              transferManager.upload(uploadRequest!).continueWith(block: { (task: AWSTask) -> Any? in
+                  if task.error != nil  {
+                      print("Error: \\(task.error?.localizedDescription)")
+      	            }
+      
+                  SVProgressHUD.dismiss()
+                  self.showAlert(title:"Upload",msg:"アップロードが完了しました")
+                  self.uploadButton.isEnabled = true
+                  
+                  if let _ = task.result {
+                      print("Upload task finished")
+                  }
+                  
+                  return nil
+              })
+          }
+          
+          @IBAction func toGrayScaleButtonTouched(_ sender: UIButton) {
+              cameraView.image = OpencvWrapper.makeGray(from: cameraView.image)
+          }
+          
+          func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
+              
+              if metadataObjects == nil || metadataObjects.count == 0 {
+                  /*
+                  qrCodeFrameView?.frame = CGRect.zero
+                  messageLabel.text = "No QR code is detected"
+                  */
+                  return
+              }
+      
+              let metadataObj = metadataObjects[0] as! AVMetadataMachineReadableCodeObject
+              
+              // If barcode found
+              if metadataObj.type == AVMetadataObjectTypeQRCode {
+              
+                  if metadataObj.stringValue != nil {
+                      // QR code is read continuously and overwrites previous values
+                      
+                     //messageLabel.text = metadataObj.stringValue
+                      bucketName = metadataObj.stringValue.characters.split{$0 == "_"}.map(String.init)[0]
+                      detectedMaskType = metadataObj.stringValue.characters.split{$0 == "_"}.map(String.init)[1]
+                      detectedAnimationType = metadataObj.stringValue.characters.split{$0 == "_"}.map(String.init)[2]
+                      print("Detected mask type : ", detectedMaskType);
+                      print("Detected animation type : ", detectedAnimationType);
+                      qrDetectionIndicator.stopAnimating();
+                      recognitionStatus.text = "QR コードを認識しました。";
+                      photoButton.isEnabled = true;
+                  }
+              }
+          }
+          
+          var documentsUrl: URL {
+              return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+          }
+          
+          private func load(fileName: String) -> UIImage? {
+              let fileURL = documentsUrl.appendingPathComponent(fileName)
+              do {
+                  let imageData = try Data(contentsOf: fileURL)
+                  return UIImage(data: imageData)
+              } catch {
+                  print("Error loading image : \\(error)")
+              }
+              return nil
+          }
+      
+      
+          func maskImage(image:UIImage, mask:(UIImage))->UIImage{
+              
+              let rotateImage = rotate(src: image, orientation: image.imageOrientation)
+              
+              let imageReference = rotateImage.cgImage
+              let maskReference = mask.cgImage
+              
+              let imageMask = CGImage(maskWidth: maskReference!.width,
+                                      height: maskReference!.height,
+                                      bitsPerComponent: maskReference!.bitsPerComponent,
+                                      bitsPerPixel: maskReference!.bitsPerPixel,
+                                      bytesPerRow: maskReference!.bytesPerRow,
+                                      provider: maskReference!.dataProvider!, decode: nil, shouldInterpolate: true)
+              
+              let maskedReference = imageReference!.masking(imageMask!)
+              
+              let maskedImage = UIImage(cgImage:maskedReference!)
+              
+              UIGraphicsBeginImageContext(maskedImage.size);
+              let rect = CGRect(x: 0, y: 0, width: maskedImage.size.width, height: maskedImage.size.height)
+              maskedImage.draw(in: rect)
+              let img = UIGraphicsGetImageFromCurrentImageContext();
+              UIGraphicsEndImageContext();
+              return img!
+          }
+          
+          private func rotate(src:UIImage, orientation:UIImageOrientation)->UIImage
+          {
+              UIGraphicsBeginImageContext(src.size);
+          
+              let context:CGContext = UIGraphicsGetCurrentContext()!
+              if (orientation == UIImageOrientation.right) {
+                  context.rotate (by: CGFloat(Double(90/180) * Double.pi)) ;
+              } else if (orientation == UIImageOrientation.left) {
+                  context.rotate (by: CGFloat(Double(-90/180) * Double.pi));
+              } else if (orientation == UIImageOrientation.down) {
+                  // NOTHING
+              } else if (orientation == UIImageOrientation.up) {
+                  context.rotate (by: CGFloat(Double(90/180) * Double.pi));
+              }
+              src.draw(at: CGPoint(x: 0, y: 0))
+              //[src drawAtPoint:CGPoint(x: 0, y: 0)];
+              let img = UIGraphicsGetImageFromCurrentImageContext();
+                  UIGraphicsEndImageContext();
+              return img!;
+          
+          }
+          
+          func resizeImage(image: UIImage, targetSize: CGSize) -> UIImage {
+              let size = image.size
+              
+              let widthRatio  = targetSize.width  / image.size.width
+              let heightRatio = targetSize.height / image.size.height
+              
+              // Figure out what our orientation is, and use that to form the rectangle
+              var newSize: CGSize
+              if(widthRatio > heightRatio) {
+                  newSize = CGSize(width: size.width * heightRatio, height: size.height * heightRatio)
+              } else {
+                  newSize = CGSize(width: size.width * widthRatio,  height: size.height * widthRatio)
+              }
+              
+              // This is the rect that we've calculated out and this is what is actually used below
+              let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+              
+              // Actually do the resizing to the rect using the ImageContext stuff
+              UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+              image.draw(in: rect)
+              let newImage = UIGraphicsGetImageFromCurrentImageContext()
+              UIGraphicsEndImageContext()
+              
+              return newImage!
+          }
+          
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:25:41.010Z"
+updatedAt: "2017-11-19T10:26:03.986Z"

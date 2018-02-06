@@ -1,0 +1,36 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Detect blobs"
+description: "Detect blobs"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      Inside header file :
+      Ptr<SimpleBlobDetector> detector;
+      
+      Inside implementation
+      
+      within Initialize()
+      detector = SimpleBlobDetector::create(params);
+      
+      
+      void Kinect::detectBlobs(Mat input) {
+      	Mat gray;
+      	cv::cvtColor(input, gray, CV_BGR2GRAY);
+      
+      	std::vector<KeyPoint> keypoints;
+      	detector->detect(gray, keypoints);
+      	Mat im_with_keypoints;
+      	drawKeypoints(gray, keypoints, im_with_keypoints, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+      	imshow("Blobs", im_with_keypoints);
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-25T14:17:54.666Z"
+updatedAt: "2017-11-25T14:19:18.351Z"

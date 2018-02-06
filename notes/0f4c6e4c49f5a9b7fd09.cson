@@ -1,0 +1,57 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Paints 8 stripes to different colors in a 80x80 image in parallel."
+description: "Paints 8 stripes to different colors in a 80x80 image in parallel."
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      /*
+       * parallel_for_() example. 
+       * Paints 8 stripes to different colors in a 80x80 image in parallel.
+       * @OpenCVTip on Twitter
+      **/
+      
+      #include <opencv2/opencv.hpp>
+      
+      using namespace cv;
+      
+      class RandomFillBody : public ParallelLoopBody
+      {
+      	Mat3b _img;
+      
+      public:
+      	RandomFillBody(Mat3b& img) : _img(img)
+      	{ }
+      
+      	void operator()(const Range& range) const override
+      	{
+      		theRNG().state = getTickCount();
+      		Vec3b color{ theRNG(), theRNG(), theRNG() };
+      
+      		for (int i = range.start; i < range.end; ++i)
+      		{
+      			int x = i % 8, y = i / 8;
+      			img(Range{ y * 10, (y + 1) * 10 }, Range{ x * 10, (x + 1) * 10 }) = color;
+      		}
+      	}
+      };
+      
+      int main()
+      {
+      	Mat3b img = Mat3b::zeros(80,80);
+      
+      	parallel_for_(Range{ 0, 64 }, RandomFillBody{ img }, 8);
+      
+      	imshow("img", img);
+      	waitKey();
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:56:33.582Z"
+updatedAt: "2017-11-19T10:56:39.915Z"

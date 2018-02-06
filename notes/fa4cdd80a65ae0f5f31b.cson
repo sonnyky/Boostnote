@@ -1,0 +1,51 @@
+type: "SNIPPET_NOTE"
+folder: "b439fa1fe45508edfa65"
+title: "monty hall problem"
+description: "monty hall problem"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      from random import randint
+      from random import choice
+      
+      N = 1000
+      
+      def simulate(N):
+          K=0
+          for i in range(0,N):
+              ###insert your code here###
+              all_doors = [1,2,3]
+              player = randint(1,3)
+              prize = randint(1,3)
+              montys_door = monty_opens(player, prize)
+              all_doors.remove(montys_door)
+              #player changes his/her choice
+              all_doors.remove(player)
+              #now only the last door remains in all_doors
+              if all_doors[0] == prize:
+                  K+=1
+          
+          return float(K) / float(N)
+      
+      def monty_opens( player,prize):
+          monty_can_open = [1,2,3]
+          if player == prize:
+              monty_can_open.remove(player)
+          else:
+              monty_can_open.remove(player)
+              monty_can_open.remove(prize)
+      
+          return choice(monty_can_open)        
+                      
+      
+      print simulate(N)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:58:15.746Z"
+updatedAt: "2017-11-19T10:58:24.305Z"

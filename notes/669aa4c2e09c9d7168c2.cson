@@ -1,0 +1,19 @@
+type: "SNIPPET_NOTE"
+folder: "cdf8a4b93828814c84f9"
+title: "Splitting string"
+description: "Splitting string"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      //results is a long string composed of all results of Google Voice recognition. RESULT_SEPARATOR is a self defined separator to split the one long string into the original list of strings after received in Unity
+      resultList = results.Split(new string[] { SpeechRecognizerManager.RESULT_SEPARATOR }, System.StringSplitOptions.None);
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T10:57:50.506Z"
+updatedAt: "2017-11-19T10:57:58.821Z"

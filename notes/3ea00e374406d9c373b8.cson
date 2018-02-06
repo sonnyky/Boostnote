@@ -1,0 +1,168 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Lava spawner"
+description: '''
+  Lava spawner
+  Snippets from the Sandbox project. Algorithms to detect concave shapes. Concave shapes are considered to be volcano craters beyond a certain height and ponds below a certain height.
+  
+'''
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      using System.Collections;
+      using System.Collections.Generic;
+      using UnityEngine;
+      
+      public class LavaSpawner : MonoBehaviour {
+          public HeightMapGenerator heightMap;
+          private List<Vector3> possibleLavaSpots, listOfExistingLavas, allPoints;
+          public float minimumHeightToSpawnLava = 14f;
+          public FlowRemover flowRemover;
+          private bool lavaSpotExists = false;
+          private Vector3 midPos, flowRemoverInitPos;
+          private Vector3 oneLavaPos;
+      
+          // Use this for initialization
+          void Start() {
+              midPos = new Vector3(256f, 44f, 256f);
+              flowRemoverInitPos = new Vector3(-256f, 44, -256f);
+              oneLavaPos = new Vector3(0, 0, 0);
+              possibleLavaSpots = new List<Vector3>();
+              listOfExistingLavas = new List<Vector3>();
+              StartCoroutine("SpawnLava", 3f);
+          }
+      
+          // Update is called once per frame
+          void Update() {
+      
+          }
+      
+          IEnumerator SpawnLava(float time)
+          {
+              yield return new WaitForSeconds(time);
+              GetPossibleLavaPoints();
+              InstantiateLavas(possibleLavaSpots);
+      
+          }
+      
+          private void GetPossibleLavaPoints()
+          {
+              if (heightMap == null) return;
+              possibleLavaSpots.Clear();
+              allPoints = heightMap.GetLavaPoint();
+              Debug.Log("All points : " + allPoints.Count);
+      
+              for (int i = 0; i < allPoints.Count; i = i + 70)
+              {
+                  if (ScanCircularRay(allPoints[i]))
+                  {
+                      possibleLavaSpots.Add(allPoints[i]);
+                  }
+              }
+              Debug.Log("Possible lava points : " + possibleLavaSpots.Count);
+          }
+      
+          bool ScanCircularRay(Vector3 objectPos)
+          {
+              int hitTimes = 0;
+              for (int i = 0; i < 360; i = i + 10)
+              {
+                  Quaternion startAngle = Quaternion.Euler(0, i, 0);
+                  Quaternion angle = transform.rotation * startAngle;
+                  Vector3 tdirection = angle * Vector3.forward;
+                  Ray ray = new Ray(objectPos, tdirection);
+                  RaycastHit hit;
+      
+                  if (Physics.Raycast(ray, out hit, 70f, 1 << 8))
+                  {
+                      hitTimes++;
+                  }
+      
+              }
+              if (hitTimes > 25) return true;
+              return false;
+          }
+      
+          private void InstantiateLavas(List<Vector3> lavaPositions)
+          {
+              Vector3 lavaPos;
+              for(int i=0;i< lavaPositions.Count; i++)
+              {
+                  //Debug.Log("Setting volcano");
+                  lavaPos = lavaPositions[i];
+                  lavaPos.y = Constants.HEIGHTMAP_MAX_HEIGHT;
+                  if (CheckIfLavaExists(lavaPos))
+                  {
+                      continue;
+                  }
+      
+                  GameObject volcano = ObjectPooler.SharedInstance.GetPooledObject("Volcano");
+                  GameObject magmaEffect = ObjectPooler.SharedInstance.GetPooledObject("EffMagma");
+                  if (volcano != null)
+                  {
+                      volcano.transform.position = lavaPos;
+                      lavaPos.y = 50f;
+                      magmaEffect.transform.position = lavaPos;
+                      volcano.transform.rotation = Quaternion.identity;
+                      magmaEffect.transform.rotation = Quaternion.identity;
+                      volcano.SetActive(true);
+                      magmaEffect.SetActive(true);
+                      listOfExistingLavas.Add(lavaPos);
+                  }
+      
+              }
+              StartCoroutine("SpawnLava", 5f);
+          }
+      
+          private bool CheckIfLavaExists(Vector3 positionTospawn)
+          {
+              if(listOfExistingLavas.Count == 0)
+              {
+                  return false;
+              }
+      
+              for(int i = 0; i < listOfExistingLavas.Count; i++)
+              {
+                  if(Vector3.Distance(positionTospawn, listOfExistingLavas[i]) < 10f)
+                  {
+                      return true;
+                  }
+              }
+              return false;
+          }
+      
+          public void RemoveLavaPointFromList(Vector3 pointToRemove)
+          {
+              for (int i = listOfExistingLavas.Count-1; i >= 0; i--)
+              {
+                  if (Vector3.Distance(pointToRemove, listOfExistingLavas[i]) < 7f)
+                  {
+                      listOfExistingLavas.RemoveAt(i);
+                  }
+              }
+          }
+      
+          public void ResetLavas()
+          {
+      
+              flowRemover.transform.position = midPos;
+              StartCoroutine(ResetFlowRemover(1f));
+          }
+      
+          IEnumerator ResetFlowRemover(float time)
+          {
+              yield return new WaitForSeconds(time);
+              flowRemover.transform.position = flowRemoverInitPos;
+          }
+      
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:44:29.655Z"
+updatedAt: "2017-11-19T10:26:58.692Z"

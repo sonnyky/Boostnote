@@ -1,0 +1,237 @@
+type: "SNIPPET_NOTE"
+folder: "52f7a89aa941701f1c18"
+title: "Script to move boat while avoiding obstacles"
+description: "Script to move boat while avoiding obstacles"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      using System.Collections;
+      using System.Collections.Generic;
+      using UnityEngine;
+      
+      // Script to move boat in a changing terrain and forces the boat to avoid land, treat land as obstacles.
+      
+      public class MoveBoat : MonoBehaviour
+      {
+          private bool obstaclePresent = false, deviated = false, canMove = false;
+          private Vector3 targetPosition, newDir, targetDir;
+          private HeightMapGenerator heightMap;    
+          private Terrain terrain;
+          private int turnDirection = 1; // -1:left, 1:right
+          RaycastHit m_HitInfo = new RaycastHit();
+          float step, speed = 3f;
+          List<Vector3> listOfDeepWaterPoints;
+          private Transform effExplosion, boatObject;
+      
+          // Use this for initialization
+          void Start()
+          {
+              effExplosion = transform.FindChild("Eff_Explosion");
+             
+              listOfDeepWaterPoints = new List<Vector3>();
+              targetPosition = new Vector3(0, 0, 0);
+              newDir = new Vector3(0, 0, 0);
+              step = speed * Time.deltaTime;
+              terrain = GameObject.Find("HeightMap").gameObject.GetComponent<Terrain>();
+              heightMap = GameObject.Find("HeightMap").gameObject.GetComponent<HeightMapGenerator>();
+              StartCoroutine("SetTargetPosition", 3f);
+          }
+      
+          void OnEnable()
+          {
+              boatObject = transform.FindChild("BoatObject");
+              boatObject.gameObject.SetActive(true);
+          }
+      
+          // Update is called once per frame
+          void Update()
+          {
+              /*
+              if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftShift))
+              {
+                  var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                  if (Physics.Raycast(ray.origin, ray.direction, out m_HitInfo))
+                  {
+                      targetPosition = m_HitInfo.point;
+                      targetPosition.y = gameObject.transform.position.y;
+                      StartMovingTowardsGoal();
+                  }
+              }
+            */
+              if (canMove)
+              {
+                  transform.position += transform.forward * Time.deltaTime * 3f;
+                  Debug.DrawRay(transform.position, (targetDir/targetDir.magnitude) * 50f, Color.red);
+                  transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(targetDir), Time.deltaTime);
+                  float angle = Vector3.Angle(targetDir, transform.forward);
+      
+                  if (angle < 1.0f && obstaclePresent)
+                  {
+                      obstaclePresent = false;
+                      deviated = true;
+                  }
+              }
+      
+              if (!obstaclePresent && canMove)
+              {
+                  CheckForObstacles();
+              }
+      
+              if (deviated)
+              {
+                  CheckIfFreeFromObstacle();
+              }
+              CheckIfArrived();
+              CheckIfOnLand();
+      
+          }
+          void CheckIfOnLand()
+          {
+              if(terrain.SampleHeight(gameObject.transform.position) > Constants.SAND_LEVEL)
+              {
+                  BoatExplodes();
+              }
+          }
+      
+          IEnumerator SetTargetPosition(float time)
+          {
+              yield return new WaitForSeconds(time);
+              listOfDeepWaterPoints = heightMap.GetFishSpawnPoint();
+              int randomIndex = Random.Range(0, listOfDeepWaterPoints.Count);
+              targetPosition = listOfDeepWaterPoints[randomIndex];
+              targetPosition.y = gameObject.transform.position.y;
+              //Debug.Log("Target position : " + targetPosition);
+              StartMovingTowardsGoal();
+              StopCoroutine("SetTargetPosition");
+          }
+      
+          void CheckIfArrived()
+          {
+              Vector3 diffVector = targetPosition - transform.position;
+              if(diffVector.magnitude < 9f)
+              {
+                  canMove = false;
+                  StartCoroutine("SetTargetPosition", 3f);
+              }
+          }
+      
+          void CheckIfFreeFromObstacle()
+          {
+              float distanceToTarget = Vector3.Distance(targetPosition, transform.position);
+              Vector3 directionOfTargetPoint = targetPosition - transform.position;
+              Debug.DrawRay(transform.position, (directionOfTargetPoint/directionOfTargetPoint.magnitude) * distanceToTarget, Color.green);
+      
+              Ray ray = new Ray(transform.position, directionOfTargetPoint);
+              RaycastHit hit;
+      
+              if (Physics.Raycast(ray, out hit))
+              {
+                 // GameObject checkerInstance = ObjectPooler.SharedInstance.GetPooledObject("PositionChecker");
+                 // checkerInstance.transform.position = hit.point;
+                 // checkerInstance.SetActive(true);
+                  if (hit.distance > distanceToTarget) {
+                      RealignWithGoal();
+                  }
+              }
+          }
+      
+          void RealignWithGoal()
+          {
+              targetDir = targetPosition - transform.position;
+              float angle = Vector3.Angle(targetDir, transform.forward);
+      
+              if (angle < 5.0f && deviated)
+              {
+                  deviated = false;
+              }
+          }
+      
+          void StartMovingTowardsGoal()
+          {
+              targetDir = targetPosition - transform.position;
+             
+              canMove = true;
+          }
+      
+          void CheckForObstacles()
+          {
+              float distanceToTarget = 10f;
+              Ray ray = new Ray(transform.position, transform.forward);
+              RaycastHit hit;
+      
+             // if (Physics.Raycast(ray, out hit) && hit.distance < distanceToTarget)
+             if(terrain.SampleHeight(transform.position + (transform.forward * 20f)) > Constants.SAND_LEVEL)
+              {
+                  
+                  obstaclePresent = true;
+                  deviated = true;
+                  GetNewHeading();
+              }
+           
+          }
+      
+          void GetNewHeading()
+          {
+              float escapeAngle = 0;
+              float longestDistance = 0;
+              float totalDistance = 0, totalAngleTimesDistance = 0;
+              Vector3 tempPoint = new Vector3(0,0,0);
+              for (int i = -90; i < 90; i = i + 10)
+              {
+                  Quaternion startAngle = Quaternion.Euler(0, i, 0);
+                  Quaternion angle = transform.rotation * startAngle;
+                  Vector3 tdirection = angle * transform.forward;
+                  Vector3 tpoint = transform.position + tdirection * 10f;
+                  Ray ray = new Ray(transform.position, tdirection);
+                  RaycastHit hit;
+                  
+                  if (Physics.Raycast(ray, out hit))
+                  {
+                      totalDistance += hit.distance;
+                      totalAngleTimesDistance += i * hit.distance;  
+                  }
+              }
+              if(totalDistance == 0)
+              {
+                  Debug.Log("Somehow total distance is zero");
+                  return;
+              }
+              escapeAngle = totalAngleTimesDistance / totalDistance;
+              Quaternion newstartAngle = Quaternion.Euler(0, escapeAngle, 0);
+              Quaternion newangle = transform.rotation * newstartAngle;
+              Vector3 newtdirection = newangle * transform.forward;
+              Vector3 newtpoint = transform.position + newtdirection * 10f;
+              /*
+              GameObject checkerInstance = ObjectPooler.SharedInstance.GetPooledObject("PositionChecker");
+              checkerInstance.transform.position = tempPoint;
+              checkerInstance.SetActive(true);
+              */
+              //Debug.Log("Found new angle : " + escapeAngle);
+              targetDir = newtpoint - transform.position;
+              return;
+          }
+      
+          void BoatExplodes()
+          {
+              boatObject.gameObject.SetActive(false);
+              effExplosion.GetComponent<ParticleSystem>().Play();
+              gameObject.GetComponent<AudioSource>().Play();
+              StartCoroutine("HideBoatPrefabObject", 5f);
+          }
+      
+          IEnumerator HideBoatPrefabObject(float time)
+          {
+              yield return new WaitForSeconds(time);
+              gameObject.SetActive(false);
+          }
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2017-11-19T09:45:14.144Z"
+updatedAt: "2017-11-19T09:45:46.633Z"
