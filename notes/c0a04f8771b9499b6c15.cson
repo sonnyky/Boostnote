@@ -1,0 +1,18 @@
+type: "MARKDOWN_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "opencv memo"
+content: '''
+  opencv memo
+  disable bioinspired
+  disable CUDA , not supporting vs 2015 and beyond
+  add modules path for contrib
+  
+'''
+tags: [
+  "installation"
+  "cmake"
+]
+isStarred: false
+isTrashed: false
+createdAt: "2018-02-06T04:03:16.997Z"
+updatedAt: "2018-02-06T04:04:04.189Z"

@@ -49,6 +49,11 @@
       "key": "01ec837f67a924176a83",
       "color": "#B013A4",
       "name": "LaserRangeFinder"
+    },
+    {
+      "key": "3e3264c3fe1bf2f3700a",
+      "color": "#E10051",
+      "name": "React"
     }
   ],
   "version": "1.0"

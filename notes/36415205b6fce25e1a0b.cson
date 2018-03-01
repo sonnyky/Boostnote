@@ -1,0 +1,47 @@
+type: "SNIPPET_NOTE"
+folder: "e76fca19ace6c60d4076"
+title: "Snippet from drawColor method which takes RGB data from buffer data and converts them into OpenCV array"
+description: "Snippet from drawColor method which takes RGB data from buffer data and converts them into OpenCV array"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      inline void Kinect::drawColor()
+      {
+      
+      	// Retrieve Mapped Coordinates
+      	std::vector<ColorSpacePoint> colorSpace(depthWidth * depthHeight);
+      	ERROR_CHECK(mapper->MapDepthFrameToColorSpace(depthBuffer.size(), &depthBuffer[0], colorSpace.size(), &colorSpace[0]));
+      	// Mapping Depth to Color Resolution
+      	std::vector<BYTE> buffer(depthWidth * depthHeight * colorBytesPerPixel);
+      	/*
+      	for (int i = 0; i < colorHeight; i++) {
+      	for (int j = 0; j < colorWidth; j++) {
+      	unsigned int colorIndex = i * colorWidth + j;
+      	if (colorBuffer[colorIndex * colorBytesPerPixel + 0] < 220 && colorBuffer[colorIndex * colorBytesPerPixel + 1] < 220 && colorBuffer[colorIndex * colorBytesPerPixel + 2] < 220) {
+      	colorBuffer[colorIndex * colorBytesPerPixel + 0] = 0;
+      	colorBuffer[colorIndex * colorBytesPerPixel + 1] = 0;
+      	colorBuffer[colorIndex * colorBytesPerPixel + 2] = 0;
+      	colorBuffer[colorIndex * colorBytesPerPixel + 3] = 1;
+      	}
+      
+      	}
+      	}
+      	*/
+      
+      	// Convert Coordinate Buffer to cv::Mat
+      	//Mapping color and depth frame taken from https://gist.github.com/UnaNancyOwen/7e2c685752e16f8e42cc#file-main-cpp-L232
+      	//colorMat = cv::Mat(depthHeight, depthWidth, CV_8UC4, &buffer[0]).clone();
+      	colorMat = Mat(colorHeight, colorWidth, CV_8UC4, &colorBuffer[0]).clone();
+      	cv::flip(colorMat, colorMat, 1);
+      }
+      
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2018-02-08T06:33:08.594Z"
+updatedAt: "2018-02-08T06:33:57.587Z"

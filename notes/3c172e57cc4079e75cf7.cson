@@ -1,0 +1,19 @@
+type: "SNIPPET_NOTE"
+folder: "da4693d7ad2ea2038215"
+title: "Save ARuco marker to JPG image"
+description: "Save ARuco marker to JPG image"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      cv::aruco::drawMarker(currentDict, 500, 250, markerImage, 1);
+      	imwrite("./arucoMarker500.jpg", markerImage);
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2018-02-08T06:40:33.903Z"
+updatedAt: "2018-02-08T06:40:46.367Z"

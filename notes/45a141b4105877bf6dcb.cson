@@ -1,0 +1,19 @@
+type: "MARKDOWN_NOTE"
+folder: "0a9f35eade47f6b5b756"
+title: "Tried already, not enough. Server stops listening and client disconnects. I found another solution, you just need to use https://docs.microsoft.com/en-us/uwp/api/Windows.ApplicationModel.ExtendedExecution.ExtendedExecutionSession in your network manager class."
+content: '''
+  
+  Tried already, not enough. Server stops listening and client disconnects. I found another solution, you just need to use https://docs.microsoft.com/en-us/uwp/api/Windows.ApplicationModel.ExtendedExecution.ExtendedExecutionSession in your network manager class.
+  Here is a good example of it: https://github.com/Microsoft/Windows-universal-samples/blob/master/Samples/ExtendedExecution/cs/Scenario1_UnspecifiedReason.xaml.cs#L81-L110
+'''
+tags: [
+  "hololens"
+  "unity"
+  "UNET"
+  "background"
+  "networking"
+]
+isStarred: false
+isTrashed: false
+createdAt: "2018-02-06T04:05:12.944Z"
+updatedAt: "2018-02-06T04:05:38.563Z"
