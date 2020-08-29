@@ -1,0 +1,39 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "Py split list into smaller lists"
+description: "Py split list into smaller lists"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      print(a_list)
+      OUTPUT
+      [1, 2, 3, 4]
+      length = len(a_list)
+      middle_index = length//2
+      Floor division rounds down
+      
+      
+      first_half = a_list[:middle_index]
+      Slice first half
+      
+      
+      print(first_half)
+      OUTPUT
+      [1, 2]
+      second_half = a_list[middle_index:]
+      Slice second half
+      
+      
+      print(second_half)
+      OUTPUT
+      [3, 4]
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-06T01:53:45.038Z"
+updatedAt: "2020-04-06T01:53:59.567Z"

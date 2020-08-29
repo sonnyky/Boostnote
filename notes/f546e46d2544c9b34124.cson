@@ -1,0 +1,23 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "Py split array into smaller arrays of string"
+description: "Py split array into smaller arrays of string"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      x = ["My Name is Sona","I live in India"]
+      z = []
+      for i in x:
+          # Replacing "," , converting to lower and then splitting
+          z.append(i.replace(","," ").split())
+      print (z)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-06T01:56:43.333Z"
+updatedAt: "2020-04-06T01:56:56.038Z"

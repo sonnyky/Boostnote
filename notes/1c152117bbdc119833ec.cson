@@ -1,0 +1,53 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "JS find intersection of array elements"
+description: "JS find intersection of array elements"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      function FindIntersection(strArr) { 
+      
+        // code goes here 
+        var prevArray = strArr.slice(0, 0);
+        var intersectedArray = [];
+        var intersectedAsString = "";
+        for (var i in strArr) {
+        
+        // slice the array elements into smaller arrays
+          var sliced = strArr.slice(i, i + 1);
+          var stringSeparation = sliced.toString().split(',');
+          
+          // convert the array element into strings
+          var prevArrayStringSeparation = prevArray.toString().split(',');
+          
+          for(var i in stringSeparation){
+            for(var j in prevArrayStringSeparation){
+      
+              // trim space
+              var src = stringSeparation[i].trim();
+              var tgt = prevArrayStringSeparation[j].trim();
+      
+              if(src == tgt){
+                if(intersectedArray.length > 0){intersectedAsString += ","}
+                intersectedArray.push(stringSeparation[i]);
+                intersectedAsString += src;
+              }
+            }
+          }
+          prevArray = sliced;
+      
+        }
+      
+        return intersectedAsString; 
+      
+      }
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-04T06:33:45.028Z"
+updatedAt: "2020-04-04T07:03:47.182Z"

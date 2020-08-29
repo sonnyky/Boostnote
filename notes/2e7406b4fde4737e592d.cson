@@ -1,0 +1,22 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "Py split string"
+description: "Py split string"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      txt = "welcome to the jungle"
+      
+      x = txt.split()
+      
+      print(x)
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-06T01:40:12.709Z"
+updatedAt: "2020-04-06T01:40:17.863Z"

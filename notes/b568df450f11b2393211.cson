@@ -1,0 +1,16 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "Py multiply all elements in a list"
+description: "Py multiply all elements in a list"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: "l = [2*x for x in l]"
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-04T07:19:15.840Z"
+updatedAt: "2020-04-04T07:19:30.465Z"

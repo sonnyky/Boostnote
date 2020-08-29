@@ -1,0 +1,35 @@
+type: "SNIPPET_NOTE"
+folder: "245f7753f97e8a46e2fe"
+title: "Py swap array elements"
+description: "Py swap array elements"
+snippets: [
+  {
+    name: ""
+    mode: "text"
+    content: '''
+      # Swap function 
+      def swapPositions(list, pos1, pos2): 
+            
+          # popping both the elements from list 
+          first_ele = list.pop(pos1)    
+          second_ele = list.pop(pos2-1) 
+           
+          # inserting in each others positions 
+          list.insert(pos1, second_ele)   
+          list.insert(pos2, first_ele)   
+            
+          return list
+        
+      # Driver function 
+      List = [23, 65, 19, 90] 
+      pos1, pos2  = 1, 3
+        
+      print(swapPositions(List, pos1-1, pos2-1)) 
+    '''
+  }
+]
+tags: []
+isStarred: false
+isTrashed: false
+createdAt: "2020-04-07T03:30:50.092Z"
+updatedAt: "2020-04-07T03:31:00.607Z"
